@@ -71,10 +71,12 @@ customersRouter.put("/update", async (req, res) => {
     } = req.body;
 
     const customer_id = parseInt(req.query.customer_id);
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const updatedCustomer = await pool.query(
       'UPDATE Customers SET first_name =?, last_name =?, address =?, phone =?, email =?, driver_license =? , password =? WHERE customer_id =?',
-      [first_name, last_name, address, phone, email, driver_license, password, customer_id]
+      [first_name, last_name, address, phone, email, driver_license, hashedPassword, customer_id]
     );
 
     res.status(200).json({
