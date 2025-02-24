@@ -3,16 +3,16 @@ const PrismaClient = require("@prisma/client").PrismaClient;
 const prisma = new PrismaClient();
 
 
-const fetchLocations = async (req, res) => {
-  try {
-    const locations = await prisma.locations.findMany();
-    // res.json(locations);
-    res.render('pages/index', { locations });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
+// const fetchLocations = async (req, res) => {
+//   try {
+//     const locations = await prisma.locations.findMany();
+//     // res.json(locations);
+//     res.render('pages/index', { locations });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
 
 locationController.get("/location", async (req, res) => {
   try {
@@ -121,4 +121,4 @@ locationController.get('/search', async (req, res) => {
 });
 
 
-module.exports = {locationController, fetchLocations};
+module.exports = {locationController};

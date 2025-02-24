@@ -1,16 +1,15 @@
 const express = require('express');
+const session = require('express-session');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
 
-// const carController = require("./controllers/cars");
+const carController = require("./controllers/cars");
 const customerController = require("./controllers/customer");
 const rentalController = require("./controllers/rentals");
-// const locationController = require("./controllers/locations");
+const locationController = require("./controllers/locations");
 const reservationController = require("./controllers/reservations");
 const path = require('path');
-const carRoutes = require('./routes/carRoutes');
-const {fetchLocations, locationController} = require('./controllers/locations');
-const locationsRoutes = require("./routes/locationRoutes");
+// const locationsRoutes = require("./routes/locationRoutes");
 const apiController = require("./controllers/apiController");
 
 const webapp = express(); 
@@ -32,12 +31,15 @@ webapp.use(
 webapp.use(express.json());
 webapp.set("view engine", "ejs");
 webapp.use(bodyParser.urlencoded({ extended: true }));
+webapp.use(express.urlencoded({ extended: true }));
 webapp.use(express.static('views'));
-// webapp.set('views', path.join(__dirname, 'views', 'pages'));
-// webapp.use('/style', express.static(path.join(__dirname, 'pages', 'style')));
 webapp.use(express.static('components'));
 
+
 webapp.use('/rentals', rentalController);
+webapp.use('/customers', customerController);
+webapp.use('/reservations', reservationController);
+
 webapp.get("/", apiController.index);
 webapp.get("/car-offer", apiController.carOffer);
 
@@ -46,25 +48,35 @@ webapp.get('/register', (req, res) => {
   res.render("pages/register");
 });
 
-// Login route to authenticate user
-webapp.get("/login", (request, response) => {
-  const { email, password } = request.query;
-  if (email === "admin" && password === "admin") {
-    request.session.customer = { email, password };
-    return response.send("Login successful");
+webapp.get('/manage-booking', (req, res) => {
+  res.render("pages/manage-booking");
+});
+
+webapp.get('/car-fleet', (req, res) => {
+  res.render("pages/carFleet");
+});
+webapp.get('/contact-us', (req, res) => {
+  res.render("pages/contact-us");
+});
+webapp.get('/faq', (req, res) => {
+  res.send(`
+    <h1>FAQ page coming soon!!</h1>
+  `);
+});
+
+webapp.post('/login', (req, res) => {
+  const { email, password } = req.body;
+  console.log('Email:', email, 'Password:', password);  
+  if (email && password) {
+    req.session.customer = { email, password };
+    return res.send("pages/profile");
   } else {
-    response.status(401).send("Login failed");
+    res.status(401).send("Login failed");
   }
 });
 
-
 webapp.post('/submit-booking-form', (req, res) => {
   const { location, pickupDate, returnDate } = req.body;
-
-  console.log('Location:', location);
-  console.log('Pick-up Date:', pickupDate);
-  console.log('Return Date:', returnDate);
-
   if (!location || !pickupDate || !returnDate) {
     return res.send(
         "Please check all fields.",
@@ -72,6 +84,8 @@ webapp.post('/submit-booking-form', (req, res) => {
   };
   res.redirect("/car-offer")
 });
+
+
 webapp.listen(8000, () => {
   console.log('Server listening on port 8000');
 });

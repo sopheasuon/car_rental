@@ -27,4 +27,13 @@ async function fetchRentals() {
   }
 }
 
-module.exports = {fetchLocations, fetchCars, fetchRentals};
+async function fetchCustomer() {
+  try {
+    const response = await axios.get('http://localhost:3000/api/customers');
+    return response.data;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+module.exports = {fetchLocations, fetchCars, fetchRentals, fetchCustomer};

@@ -15,7 +15,7 @@ async function index(req, res) {
   }
 }
 
-async function carOffer(req, res, next) {
+async function carOffer(req, res) {
   try {
     const rentals = await prismaService.getRentals();
     console.log("cars: " + rentals);
@@ -29,13 +29,10 @@ async function searchCarOffer(req, res) {
   try {
     const { model } = req.query;
 
-    // Prepare the search parameters for the service
     const searchParams = { model };
 
-    // Fetch the rentals based on the search parameters
     const rentals = await apiService.fetchRentals(searchParams);
 
-    // Render the 'rentals' EJS view and pass the rentals data
     res.render('pages/car-offer', {
       rentals, 
       model: model || '',
@@ -46,4 +43,11 @@ async function searchCarOffer(req, res) {
   }
 }
 
-module.exports = {index, carOffer, searchCarOffer};
+async function login(req, res) {
+  try {
+    res.render('components/loginModal');
+  } catch(err) {
+    console.error(err);
+  }
+}
+module.exports = {index, carOffer, searchCarOffer, login};
