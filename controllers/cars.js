@@ -1,137 +1,163 @@
-const express = require('express');
-const pool = require('../db');
-const carsRouter = express.Router();
+// const carController = require("express").Router();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-carsRouter.get('/', async (req, res) => {
-  try {
-    const cars = await pool.query('SELECT * FROM Cars'); 
-    return res.json(cars[0]); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
-  }
-})
+// const getCars = async (req, res) => {
+//   try {
+//     const cars = await prisma.cars.findMany();
+//     res.json(cars);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
 
-carsRouter.get('/car', async (req, res) => {
-  try {
-    const car_id = req.query.car_id;
-    const cars = await pool.query('SELECT * FROM Cars WHERE car_id = ?', [car_id]);
+// carController.get("/car", async (req, res) => {
+//   try {
+//     const car = await prisma.cars.findUnique({ where: { car_id: req.query.id } });;
+//     if (!car) {
+//       return res.status(404).json({ error: "Car not found" });
+//     }
+//     res.json(car);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+// carController.post("/", async (req, res) => {
+//   try {
+//     const {
+//       car_id,
+//       make,        
+//       model,      
+//       year,       
+//       color,
+//       vehicle_type,
+//       status,
+//       image,
+//     } = req.body || {}
+
+//     const createdRecord = await prisma.cars.create({
+//       data: {
+//         car_id,
+//         make,
+//         model,
+//         year,
+//         color,
+//         vehicle_type,
+//         status,
+//         image,
+//       },
+//     });
+
+//     return res.send(createdRecord);
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+// carController.put("/:id", async (req, res) => {
+//   try {
+//     const {
+//       make,        
+//       model,      
+//       year,       
+//       color,
+//       vehicle_type,
+//       status,
+//       image,
+//     } = req.body || {}
+
+//     const updatedRecord = await prisma.cars.update({
+//       where: { car_id: req.params.id },
+//       data: {
+//         make,
+//         model,
+//         year,
+//         color,
+//         vehicle_type,
+//         status,
+//         image,
+//       },
+//     });
+
+//     return res.send(updatedRecord);
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+// carController.delete("/:id", async (req, res) => {
+//   try {
+//     const deletedRecord = await prisma.cars.delete({
+//       where: { car_id: req.params.id },
+//     });
+
+//     return res.send(deletedRecord);
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+// carController.get("/paginate", async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 4;
+//     const skip = (page - 1) * limit;
+//     const results = await prisma.cars.findMany({
+//       take: limit,
+//       skip: skip,
+//       orderBy: {
+//         car_id: 'asc',
+//       },
+//     });
+
+//     return res.json(results);
     
-    return res.json(cars[0]); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
-  }
-})
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
 
-carsRouter.post('/create', async (req, res) => {
+// carController.get("/search", async (req, res) => {
+//   try {
+//     const { make, model } = req.query || {};
+
+//     const results = await prisma.cars.findMany({
+//       where: {
+//         OR: [
+//           { make: { contains: make } },
+//           { model: { contains: model } },
+//         ],
+//       },
+//     });
+
+//     return res.json(results);
+    
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+const getAllCars = async (req, res) => {
   try {
-    const {
-      car_id,
-      make,
-      model,
-      year,
-      color,
-      vehicle_type,
-      status
-    } = req.body;
-
-    const newCar = await pool.query(
-      'INSERT INTO Cars (car_id, make, model, year, color, vehicle_type, status) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-      [car_id, make, model, year, color, vehicle_type, status]
-    ); 
-    return res.json({
-      message: 'Car created successfully'
-    }); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+    const cars = await prisma.cars.findMany();
+    // res.render('pages/index', { cars: cars });
+    // console.log(cars);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
   }
-})
+};
 
-carsRouter.put("/update", async (req, res) => {
-  try {
-    const {
-      make,
-      model,
-      year,
-      color,
-      vehicle_type,
-      status 
-    } = req.body;
-
-    const car_id = req.query.car_id;
-
-    const updatedCar = await pool.query(
-      'UPDATE Cars SET make =?, model =?, year =?, color =?, vehicle_type =?, status =? WHERE car_id =?', 
-      [make, model, year, color, vehicle_type, status, car_id]
-    ); 
-
-    return res.json({
-      message: 'Car updated successfully'
-    }); 
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
-  }
-})
-
-carsRouter.delete("/delete", async (req, res) => {
-  try {
-    const car_id = req.query.car_id;
-    const deletedCar = await pool.query('DELETE FROM Cars WHERE car_id =?', [car_id]);
-
-    return res.json({
-      message: 'Car deleted successfully'
-    }); 
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
-  }
-})
-
-carsRouter.get("/search", async (req, res) => {
-  try {
-    const searchCar = req.query.searchCar;
-    console.log('search', searchCar);
-    const cars = await pool.query('SELECT * FROM Cars WHERE make LIKE? OR model LIKE? OR year LIKE? OR color LIKE? OR vehicle_type OR status LIKE?', 
-      ['%' + searchCar + '%', '%' + searchCar + '%', '%' + searchCar + '%', '%' + searchCar + '%', '%' + searchCar + '%', '%' + searchCar + '%']
-    );
-
-    return res.json(cars[0]); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
-  }
-})
-
-carsRouter.get("/pagination", async (req, res) => {
-  try {
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
-    const offset = (page - 1) * limit;
-
-    const cars = await pool.query('SELECT * FROM Cars LIMIT ?,?', [offset, limit]);
-    return res.json(cars[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
-  }
-})
-module.exports = carsRouter;
+// Export the controller function
+module.exports = { getAllCars };

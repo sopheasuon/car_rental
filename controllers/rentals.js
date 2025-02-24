@@ -1,142 +1,150 @@
-const express = require('express');
-const pool = require('../db');
-const RentalsRouter = express.Router();
+const rentalController = require("express").Router();
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
 
-RentalsRouter.get("/", async(req, res) => {
+rentalController.get("/", async (req, res) => {
   try {
-    const rentals = await pool.query(
-      `
-        SELECT * FROM Rentals r 
-        INNER JOIN Customers c ON r.customer_id = c.customer_id
-        INNER JOIN Cars ca ON r.car_id = ca.car_id
-      `);
-    return res.json(rentals[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
-    });
+    const rentals = await prisma.rental.findMany();
+    res.json(rentals);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-RentalsRouter.get("/rental", async (req, res) => {
+rentalController.get("/rental", async (req, res) => {
   try {
-    const rental_id = parseInt(req.query.rental_id);
-
-    const rental = await pool.query("SELECT * FROM Rentals WHERE rental_id =?", [rental_id]);
-    res.status(200).json(rental[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
+    const rental = await prisma.rental.findUnique({
+      where: { rental_id: parseInt(req.query.id) },
     });
-  }
-})
 
-RentalsRouter.post("/create", async (req, res) => {
+    if (!rental) {
+      return res.status(404).json({ error: "Rental not found" });
+    }
+    res.json(rental);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+rentalController.post("/", async (req, res) => {
   try {
     const {
       rental_id,
-      customer_id,
-      car_id,
       rental_start_date,
       rental_end_date,
       return_date,
-      rental_cost
-    } = req.body;
+      rental_cost,
+      carId,
+      customerId
+    } = req.body || {}
 
-    const newRental = await pool.query(
-      "INSERT INTO Rentals (rental_id, customer_id, car_id, rental_start_date, rental_end_date, return_date, rental_cost) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [rental_id, customer_id, car_id, rental_start_date, rental_end_date, return_date, rental_cost]
-    );
+    const createdRecord = await prisma.rental.create({
+      data: {
+        rental_id,
+        rental_start_date,
+        rental_end_date,
+        return_date,
+        rental_cost,
+        carId,
+        customerId
+      },
+    });
 
-    return res.json({ 
-      message: "Rental created successfully" 
-    });
-  }catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
-    });
+    return res.send(createdRecord);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-RentalsRouter.put("/update", async (req, res) => {
+rentalController.put("/:id", async (req, res) => {
   try {
     const {
-      customer_id,
-      car_id,
       rental_start_date,
       rental_end_date,
       return_date,
-      rental_cost
-    } = req.body;
+      rental_cost,
+      carId,
+      customerId
+    } = req.body || {}
 
-    const rental_id  = req.query.rental_id;
-
-    const updatedRental = await pool.query(
-      "UPDATE Rentals SET customer_id =?, car_id =?, rental_start_date =?, rental_end_date =?, return_date =?, rental_cost =? WHERE rental_id =?",
-      [customer_id, car_id, rental_start_date, rental_end_date, return_date, rental_cost, rental_id]
-    );
-
-    res.json({ 
-      message: "Rental updated successfully",
-      updatedRental: updatedRental[0]
+    const updatedRecord = await prisma.rental.update({
+      where: { rental_id: parseInt(req.params.id) },
+      data: {
+        rental_start_date,
+        rental_end_date,
+        return_date,
+        rental_cost,
+        carId,
+        customerId
+      },
     });
-  }catch(err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
-    });
+
+    return res.send(updatedRecord);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-RentalsRouter.delete("/delete", async (req, res) => {
+rentalController.delete("/:id", async (req, res) => {
   try {
-    const rental_id = parseInt(req.query.rental_id);
-
-    const deletedRental = await pool.query("DELETE FROM Rentals WHERE rental_id =?", [rental_id]);
-
-    res.json({ 
-      message: "Rental deleted successfully" 
+    const deletedRecord = await prisma.rental.delete({
+      where: { rental_id: parseInt(req.params.id) },
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
-    });
+
+    return res.send(deletedRecord);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-RentalsRouter.get("/pagination", async (req, res) => {
+rentalController.get("/paginate", async (req, res) => {
   try {
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
-    const offset = (page - 1) * limit;
-
-    const rentals = await pool.query("SELECT * FROM Rentals LIMIT ?,?", [offset, limit]);
-    return res.json(rentals[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const skip = (page - 1) * limit;
+    const results = await prisma.rental.findMany({
+      skip,
+      take: limit,
     });
+
+    res.json(results);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-RentalsRouter.get("/search", async (req, res) => {
+rentalController.get("/sreach", async (req, res) => {
   try {
-    const searchTerm = req.query.searchTerm;
-    const rentals = await pool.query("SELECT * FROM Rentals WHERE customer_id LIKE? OR car_id LIKE?", 
-      ['%' + searchTerm + '%', '%' + searchTerm + '%']
-    );
-    return res.json(rentals[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: "Internal Server Error" 
+    const { rental_start_date, rental_end_date, customerId } = req.query || {};
+    const customer_id = parseInt(customerId)
+
+    const results = await prisma.rental.findMany({
+      where: {
+        OR: [
+          { rental_start_date: { gte: rental_start_date } },
+          { rental_end_date: { lte: rental_end_date } },
+          { customerId: parseInt(customerId) },
+        ],
+      },
     });
+
+    res.json(results);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-module.exports = RentalsRouter;
+
+module.exports = rentalController;

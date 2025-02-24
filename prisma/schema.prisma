@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Cars {
+  car_id       String   @id
+  make         String
+  model        String
+  year         Int
+  color        String  @db.VarChar(50)
+  vehicle_type String  @db.VarChar(50)
+  status       Status
+  image        String @db.Text
+  rental Rental  []
+}
+
+enum Status {
+  Available
+  Rented
+  Maintenance
+}
+
+model Customer {
+  customer_id    Int    @id @default(autoincrement())
+  first_name     String @db.VarChar(255)
+  last_name      String @db.VarChar(255)
+  address        String @db.Text
+  phone          String @db.VarChar(255)
+  email          String @db.VarChar(255)
+  password    String   @db.Char(60)
+  driver_license String @db.VarChar(255)
+  rental Rental  []
+  reservation Reservation []
+}
+
+model Locations {
+  location_id   Int   @id
+  location_name String @db.VarChar(255)
+  address       String @db.Text
+  pickup_reservations  Reservation[] @relation("PickupLocation")
+  return_reservations  Reservation[] @relation("ReturnLocation")
+
+}
+
+model Rental {
+  rental_id           Int         @id
+  rental_start_date   DateTime    @default(now())
+  rental_end_date     DateTime
+  return_date         DateTime
+  rental_cost         Decimal     @db.Decimal(10, 2)
+  carId               String      @db.VarChar(255)
+  customerId          Int
+  customer        Customer  @relation(fields: [customerId], references: [customer_id])
+  car             Cars       @relation(fields: [carId], references: [car_id])
+}
+
+model Reservation {
+  reservation_id    Int       @id
+  customer_id       Int
+  car_type          String    @db.VarChar(50)
+  pickup_location_id Int
+  pickup_date       DateTime
+  return_location_id Int
+  return_date       DateTime
+
+  customer          Customer  @relation(fields: [customer_id], references: [customer_id])
+  pickup_location   Locations  @relation("PickupLocation", fields: [pickup_location_id], references: [location_id])
+  return_location   Locations  @relation("ReturnLocation", fields: [return_location_id], references: [location_id])
+}

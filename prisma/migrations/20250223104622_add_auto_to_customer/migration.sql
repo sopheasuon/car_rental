@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Customer` MODIFY `customer_id` INTEGER NOT NULL AUTO_INCREMENT;

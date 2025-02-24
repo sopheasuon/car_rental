@@ -1,140 +1,154 @@
-const express = require('express');
-const pool = require('../db');
-const bcrypt = require('bcryptjs');
-const customersRouter = express.Router();
+const customerController = require("express").Router();
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
 
-customersRouter.get('/', async (req, res) => {
+customerController.get("/", async (req, res) => {
   try {
-    const customers = await pool.query('SELECT * FROM Customers'); 
-    return res.json(customers[0]); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' }); 
-  }
-});
-customersRouter.get('/customer', async (req, res) => {
-  try {
-    const customer_id = req.query.customer_id;
-    const customer = await pool.query('SELECT * FROM Customers WHERE customer_id = ?', [customer_id]);
-    return res.json(customer[0]); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json(
-      { error: 'Internal Server Error' }
-    ); 
+    const customers = await prisma.customer.findMany();
+    res.json(customers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-customersRouter.post('/create', async (req, res) => {
+customerController.get("/customer", async (req, res) => {
+  try {
+    const customer = await prisma.customer.findUnique({ where: { customer_id: parseInt(req.query.id) } });;
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+    res.json(customer);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+customerController.post("/", async (req, res) => {
   try {
     const {
-      customer_id, 
-      first_name, 
-      last_name, 
-      address, 
-      phone, 
-      email, 
-      driver_license,
+      customer_id,
+      first_name,
+      last_name,
+      address ,
+      phone,
+      email,
       password,
-    } = req.body;
+      driver_license,
+    } = req.body || {}
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const newCustomer = await pool.query(
-      `INSERT INTO Customers (customer_id, first_name, last_name, address, phone, email, driver_license, password) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [customer_id, first_name, last_name, address, phone, email, driver_license, hashedPassword]
-    );
-
-    res.status(200).json({
-      message: 'Customer created successfully'
-    })
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
+    const createdRecord = await prisma.customer.create({
+      data: {
+        customer_id,
+        first_name,
+        last_name,
+        address ,
+        phone,
+        email,
+        password,
+        driver_license,
+      },
     });
+
+    return res.send(createdRecord);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-customersRouter.put("/update", async (req, res) => {
+customerController.put("/:id", async (req, res) => {
   try {
     const {
-      first_name, 
-      last_name, 
-      address, 
-      phone, 
-      email, 
+      first_name,
+      last_name,
+      address ,
+      phone,
+      email,
+      password,
       driver_license,
-      password
-    } = req.body;
+    } = req.body || {}
 
-    const customer_id = parseInt(req.query.customer_id);
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const updatedCustomer = await pool.query(
-      'UPDATE Customers SET first_name =?, last_name =?, address =?, phone =?, email =?, driver_license =? , password =? WHERE customer_id =?',
-      [first_name, last_name, address, phone, email, driver_license, hashedPassword, customer_id]
-    );
-
-    res.status(200).json({
-      message: 'Customer updated successfully'
-    })
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
+    const updatedRecord = await prisma.customer.update({
+      where: { customer_id: parseInt(req.params.id) },
+      data: {
+        first_name,
+        last_name,
+        address ,
+        phone,
+        email,
+        password,
+        driver_license,
+      },
     });
-  }
-})
 
-customersRouter.delete("/delete", async (req, res) => {
+    return res.send(updatedRecord);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+customerController.delete("/:id", async (req, res) => {
   try {
-    const customer_id = req.query.customer_id;
-    const deletedCustomer = await pool.query('DELETE FROM Customers WHERE customer_id = ?', [parseInt(customer_id)]);
-    res.status(200).json({
-      message: 'Customer deleted successfully'
-    })
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    });
+    const deletedRecord = await prisma.customer.delete({ where: { customer_id: parseInt(req.params.id) } });
+    if (!deletedRecord) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+    res.send(deletedRecord);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-customersRouter.get("/search", async (req, res) => {
+customerController.get("/paginate", async (req, res) => {
   try {
-    const searchCustomer = req.query.searchCustomer;
-    console.log('search', searchCustomer);
-    const customers = await pool.query('SELECT * FROM Customers WHERE first_name LIKE? OR last_name LIKE?', 
-      ['%' + searchCustomer + '%', '%' + searchCustomer + '%', '%']
-    );
-    return res.json(customers[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const skip = (page - 1) * limit;
+    const results = await prisma.customer.findMany({
+      take: limit,
+      skip: skip,
+      orderBy: {
+        customer_id: 'asc',
+      },
     });
-  }
-})
 
-customersRouter.get("/pagination", async (req, res) => {
+    return res.json(results);
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+customerController.get("/search", async (req, res) => {
   try {
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
-    const offset = (page - 1) * limit;
-    console.log('offset', offset);
-    const customers = await pool.query('SELECT * FROM Customers LIMIT ?,?', [offset, limit]);
-    return res.json(customers[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    });
-  }
-})
+    const { first_name, last_name, address, phone, email } = req.query;
 
-module.exports = customersRouter
+    const results = await prisma.customer.findMany({
+      where: {
+        OR: [
+          { first_name: { contains: first_name } },
+          { last_name: { contains: last_name } },
+          { address: { contains: address } },
+          { phone: { contains: phone } },
+          { email: { contains: email } },
+        ],
+      },
+    });
+
+    return res.json(results);
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+module.exports = customerController;

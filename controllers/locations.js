@@ -1,133 +1,124 @@
-const express = require('express');
-const pool = require('../db');
-const LocationsRouter = express.Router();
+const locationController = require("express").Router();
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
 
-LocationsRouter.get('/', async (req, res) => {
+
+const fetchLocations = async (req, res) => {
   try {
-    const locations = await pool.query('SELECT * FROM Locations'); 
-    return res.json(locations[0]); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+    const locations = await prisma.locations.findMany();
+    // res.json(locations);
+    res.render('pages/index', { locations });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+};
 
-LocationsRouter.get('/location', async (req, res) => {
+locationController.get("/location", async (req, res) => {
   try {
-    const location_id = parseInt(req.query.location_id);
-    console.log('location_id: ' + location_id);
-    const location = await pool.query('SELECT * FROM Locations WHERE location_id = ?', [location_id]);
-    res.status(200).json(location[0]); 
-  }catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    });
+    const location = await prisma.locations.findUnique({ where: { location_id: parseInt(req.query.id) } });;
+    if (!location) {
+      return res.status(404).json({ error: "Location not found" });
+    }
+    res.json(location);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-LocationsRouter.post('/create', async (req, res) => {
+locationController.post("/", async (req, res) => {
   try {
     const {
       location_id,
       location_name,
-      address
-    } = req.body;
+      address  
+    } = req.body || {}
 
-    const newLocation = await pool.query(
-      'INSERT INTO Locations (location_id, location_name, address) VALUES (?, ?, ?)', 
-      [location_id, location_name, address]
-    ); 
+    const createdRecord = await prisma.locations.create({
+      data: {
+        location_id,
+        location_name,
+        address 
+      },
+    });
 
-    return res.json({
-      message: 'Location created successfully'
-    }); 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+    return res.send(createdRecord);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-LocationsRouter.put("/update", async (req, res) => {
+locationController.put("/:id", async (req, res) => {
   try {
     const {
       location_name,
-      address
-    } = req.body;
+      address  
+    } = req.body || {}
 
-    const location_id = parseInt(req.query.location_id);
+    const updatedRecord = await prisma.locations.update({
+      where: { location_id: parseInt(req.params.id) },
+      data: {
+        location_name,
+        address  
+      },
+    });
 
-    const updatedLocation = await pool.query(
-      'UPDATE Locations SET location_name =?, address =? WHERE location_id =?', 
-      [location_name, address, location_id]
-    ); 
+    return res.send(updatedRecord);
 
-    return res.json({
-      message: 'Location updated successfully'
-    }); 
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-LocationsRouter.delete("/delete", async (req, res) => {
+locationController.delete("/:id", async (req, res) => {
   try {
-    const location_id = parseInt(req.query.location_id);
-    const deletedLocation = await pool.query('DELETE FROM Locations WHERE location_id =?', [location_id]);
+    const deletedRecord = await prisma.location.delete({
+      where: { location_id: parseInt(req.params.id) },
+    });
 
-    return res.json({
-      message: 'Location deleted successfully'
-    }); 
+    return res.send(deletedRecord);
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-LocationsRouter.get("/search", async (req, res) => {
+locationController.get('/paginate', async (req, res) => {
   try {
-    const searchLocation = req.query.searchLocation;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const skip = (page - 1) * limit;
+    const results = await prisma.locations.findMany({
+      skip,
+      take: limit,
+    });
 
-    const locations = await pool.query('SELECT * FROM Locations WHERE location_name LIKE? OR address LIKE?', 
-      ['%' + searchLocation + '%', '%' + searchLocation + '%']
-    );
-    return res.json(locations[0]); 
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+    return res.json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+  
+});
 
-LocationsRouter.get("/paginations", async (req, res) => {
+locationController.get('/search', async (req, res) => {
   try {
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
+    const { location_name } = req.query;
+    const results = await prisma.locations.findMany({
+      where: { location_name: { contains: location_name } },
+    });
 
-    const startIndex = (page - 1) * limit;
-
-    const locations = await pool.query('SELECT * FROM Locations LIMIT ?,?', [startIndex, limit]);
-    return res.json(locations[0]); 
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      error: 'Internal Server Error' 
-    }); 
+    return res.json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
-module.exports = LocationsRouter;
+
+module.exports = {locationController, fetchLocations};

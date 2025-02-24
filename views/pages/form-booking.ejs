@@ -1,0 +1,26 @@
+<form action="/submit-booking-form" method="post" class="form-booking">
+  <div class="select-location">
+    <label for="location">Pick-up & return</label>
+    <select name="location" id="location">
+      <% locations.forEach(function(location){ %>
+        <option value="<%= location.location_id %>"> <%= location.location_name %></option>
+      <% }); %>
+    </select>
+  </div>
+
+  <div class="input-form">
+    <div class="input-date">
+      <label for="fpickup">Pick-up date</label>
+      <input type="date" name="pickupDate" id="fpickup">
+    </div>
+    <div class="input-date">
+      <label for="freturn">Return date</label>
+      <input type="date" name="returnDate" id="freturn">
+    </div>
+    <div class="show-car">
+      <label for=""><span></span></label>
+      <button class="btn-show-car" type="submit">Show Car</button>
+    </div>
+  </div>
+
+</form>
